@@ -1,0 +1,20 @@
+
+# Exemple d'Offre d'Emploi
+
+**Poste:** Développeur Full-Stack Senior
+
+**Description:**
+Nous recherchons un développeur full-stack expérimenté pour rejoindre notre équipe technique.
+
+**Compétences requises:**
+- Python (Django/Flask)
+- JavaScript (React/Vue.js)
+- Base de données (PostgreSQL, MongoDB)
+- Git, Docker
+- 5+ années d'expérience
+
+**Formation:** Master en informatique ou équivalent
+**Lieu:** Paris, France
+**Contrat:** CDI
+**Salaire:** 50-60k€ par an
+        

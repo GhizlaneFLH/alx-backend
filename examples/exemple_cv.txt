@@ -1,0 +1,34 @@
+
+# CV - Marie Martin
+
+**Contact:**
+- Email: marie.martin@email.com
+- Téléphone: 06 12 34 56 78
+- Localisation: Paris
+
+**Expérience Professionnelle:**
+
+**2020-2024: Développeuse Full-Stack Senior - TechCorp**
+- Développement d'applications web avec Python/Django
+- Frontend avec React.js
+- Gestion de bases de données PostgreSQL
+- Travail en équipe agile
+
+**2018-2020: Développeuse Web - StartupXYZ**
+- Développement avec Python/Flask
+- JavaScript/Vue.js
+- MongoDB
+
+**Formation:**
+- 2018: Master Informatique - Université Paris Diderot
+
+**Compétences Techniques:**
+- Python, Django, Flask
+- JavaScript, React, Vue.js
+- PostgreSQL, MongoDB
+- Git, Docker, AWS
+
+**Langues:**
+- Français (natif)
+- Anglais (courant)
+        
