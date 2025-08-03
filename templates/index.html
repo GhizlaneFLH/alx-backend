@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Système Multi-Agent de Matching CV-Offres</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        
+        .upload-area.dragover {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: none;
+            transition: transform 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .progress-step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .progress-step.active {
+            background: #007bff;
+            color: white;
+        }
+        
+        .progress-step.completed {
+            background: #28a745;
+            color: white;
+        }
+        
+        .result-card {
+            border-left: 4px solid #007bff;
+        }
+        
+        .score-excellent { border-left-color: #28a745; }
+        .score-good { border-left-color: #17a2b8; }
+        .score-average { border-left-color: #ffc107; }
+        .score-poor { border-left-color: #dc3545; }
+        
+        .loading-spinner {
+            display: none;
+        }
+        
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg gradient-bg">
+        <div class="container">
+            <a class="navbar-brand" href="#" style="color: white;">
+                <i class="fas fa-brain me-2"></i>
+                Système Multi-Agent CV-Matching
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Progress Indicator -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="progress-step" id="step-1">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <h6>Upload Offre</h6>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="progress-step" id="step-2">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <h6>Upload CVs</h6>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="progress-step" id="step-3">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <h6>Analyse</h6>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="progress-step" id="step-4">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h6>Résultats</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Area -->
+        <div id="alertArea"></div>
+
+        <!-- Step 1: Upload Job Offer -->
+        <div class="card mb-4" id="offerSection">
+            <div class="card-header gradient-bg">
+                <h5 class="mb-0" style="color: white;">
+                    <i class="fas fa-briefcase me-2"></i>
+                    Étape 1: Upload de l'Offre d'Emploi
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="upload-area" id="offerUploadArea">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                    <h5>Glissez-déposez votre offre d'emploi (PDF)</h5>
+                    <p class="text-muted">ou cliquez pour sélectionner un fichier</p>
+                    <input type="file" id="offerFile" accept=".pdf" class="d-none">
+                </div>
+                <div id="offerInfo" class="mt-3" style="display: none;">
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <span id="offerFileName"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Upload CVs -->
+        <div class="card mb-4" id="cvsSection" style="display: none;">
+            <div class="card-header gradient-bg">
+                <h5 class="mb-0" style="color: white;">
+                    <i class="fas fa-users me-2"></i>
+                    Étape 2: Upload des CVs
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="upload-area" id="cvsUploadArea">
+                    <i class="fas fa-files-o fa-3x text-muted mb-3"></i>
+                    <h5>Glissez-déposez vos CVs (PDF)</h5>
+                    <p class="text-muted">Sélection multiple autorisée</p>
+                    <input type="file" id="cvsFiles" accept=".pdf" multiple class="d-none">
+                </div>
+                <div id="cvsInfo" class="mt-3">
+                    <div class="file-list" id="cvsList"></div>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-primary" id="startProcessing" disabled>
+                        <i class="fas fa-play me-2"></i>
+                        Lancer l'Analyse
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Processing -->
+        <div class="card mb-4" id="processingSection" style="display: none;">
+            <div class="card-header gradient-bg">
+                <h5 class="mb-0" style="color: white;">
+                    <i class="fas fa-cogs me-2"></i>
+                    Analyse en Cours
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+                <h5>Analyse des documents...</h5>
+                <p class="text-muted">Cela peut prendre quelques instants</p>
+                <div id="processingStatus" class="mt-3"></div>
+            </div>
+        </div>
+
+        <!-- Step 4: Results -->
+        <div class="card mb-4" id="resultsSection" style="display: none;">
+            <div class="card-header gradient-bg d-flex justify-content-between align-items-center">
+                <h5 class="mb-0" style="color: white;">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Résultats du Matching
+                </h5>
+                <button class="btn btn-light btn-sm" id="exportResults">
+                    <i class="fas fa-download me-2"></i>
+                    Exporter CSV
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="resultsContent">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let sessionId = null;
+        let currentStep = 1;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updateProgressSteps();
+        });
+
+        function setupEventListeners() {
+            // Offer upload
+            const offerUploadArea = document.getElementById('offerUploadArea');
+            const offerFile = document.getElementById('offerFile');
+
+            offerUploadArea.addEventListener('click', () => offerFile.click());
+            offerUploadArea.addEventListener('dragover', handleDragOver);
+            offerUploadArea.addEventListener('drop', handleOfferDrop);
+            offerFile.addEventListener('change', handleOfferSelect);
+
+            // CVs upload
+            const cvsUploadArea = document.getElementById('cvsUploadArea');
+            const cvsFiles = document.getElementById('cvsFiles');
+
+            cvsUploadArea.addEventListener('click', () => cvsFiles.click());
+            cvsUploadArea.addEventListener('dragover', handleDragOver);
+            cvsUploadArea.addEventListener('drop', handleCvsDrop);
+            cvsFiles.addEventListener('change', handleCvsSelect);
+
+            // Start processing
+            document.getElementById('startProcessing').addEventListener('click', startProcessing);
+
+            // Export results
+            document.getElementById('exportResults').addEventListener('click', exportResults);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleOfferDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadOffer(files[0]);
+            }
+        }
+
+        function handleCvsDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadCvs(files);
+            }
+        }
+
+        function handleOfferSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                uploadOffer(file);
+            }
+        }
+
+        function handleCvsSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                uploadCvs(files);
+            }
+        }
+
+        async function uploadOffer(file) {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showAlert('Erreur: Seuls les fichiers PDF sont acceptés.', 'danger');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('offer', file);
+
+            try {
+                const response = await fetch('/api/upload-offer', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    sessionId = data.session_id;
+                    document.getElementById('offerFileName').textContent = file.name;
+                    document.getElementById('offerInfo').style.display = 'block';
+                    
+                    showAlert('Offre d\'emploi uploadée avec succès!', 'success');
+                    
+                    currentStep = 2;
+                    updateProgressSteps();
+                    document.getElementById('cvsSection').style.display = 'block';
+                } else {
+                    showAlert('Erreur: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Erreur lors de l\'upload: ' + error.message, 'danger');
+            }
+        }
+
+        async function uploadCvs(files) {
+            const pdfFiles = Array.from(files).filter(file => 
+                file.name.toLowerCase().endsWith('.pdf')
+            );
+
+            if (pdfFiles.length === 0) {
+                showAlert('Erreur: Aucun fichier PDF valide sélectionné.', 'danger');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('session_id', sessionId);
+            
+            pdfFiles.forEach(file => {
+                formData.append('cvs', file);
+            });
+
+            try {
+                const response = await fetch('/api/upload-cvs', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayCvsList(data.uploaded_files);
+                    
+                    if (data.failed_files && data.failed_files.length > 0) {
+                        showAlert(`${data.uploaded_files.length} CVs uploadés. ${data.failed_files.length} échecs.`, 'warning');
+                    } else {
+                        showAlert(`${data.uploaded_files.length} CVs uploadés avec succès!`, 'success');
+                    }
+                    
+                    document.getElementById('startProcessing').disabled = false;
+                } else {
+                    showAlert('Erreur: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Erreur lors de l\'upload: ' + error.message, 'danger');
+            }
+        }
+
+        function displayCvsList(files) {
+            const cvsList = document.getElementById('cvsList');
+            cvsList.innerHTML = '<h6>CVs uploadés:</h6>';
+            
+            files.forEach(fileName => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'alert alert-info mb-2';
+                fileItem.innerHTML = `
+                    <i class="fas fa-file-pdf me-2"></i>
+                    ${fileName}
+                `;
+                cvsList.appendChild(fileItem);
+            });
+        }
+
+        async function startProcessing() {
+            currentStep = 3;
+            updateProgressSteps();
+            
+            document.getElementById('processingSection').style.display = 'block';
+            document.getElementById('startProcessing').disabled = true;
+
+            try {
+                const response = await fetch('/api/process-matching', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Analyse terminée avec succès!', 'success');
+                    currentStep = 4;
+                    updateProgressSteps();
+                    
+                    document.getElementById('processingSection').style.display = 'none';
+                    document.getElementById('resultsSection').style.display = 'block';
+                    
+                    await loadResults();
+                } else {
+                    showAlert('Erreur lors du traitement: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Erreur lors du traitement: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadResults() {
+            try {
+                const response = await fetch(`/api/results/${sessionId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data.results);
+                } else {
+                    showAlert('Erreur lors du chargement des résultats.', 'danger');
+                }
+            } catch (error) {
+                showAlert('Erreur lors du chargement: ' + error.message, 'danger');
+            }
+        }
+
+        function displayResults(results) {
+            const resultsContent = document.getElementById('resultsContent');
+            
+            let html = `
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6>Offre d'emploi: ${results.offer_info.title}</h6>
+                        <p class="text-muted">Score de complétude: ${(results.offer_info.completeness_score * 100).toFixed(1)}%</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Statistiques de traitement:</h6>
+                        <p class="text-muted">
+                            Temps: ${results.processing_stats.total_processing_time}s<br>
+                            CVs traités: ${results.processing_stats.cvs_processed}
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            html += '<h6>Top Candidats:</h6>';
+
+            results.top_candidates.forEach(candidate => {
+                const scoreClass = getScoreClass(candidate.global_score);
+                html += `
+                    <div class="card result-card ${scoreClass} mb-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h6 class="mb-1">${candidate.name}</h6>
+                                    <p class="text-muted mb-1">${candidate.file_name}</p>
+                                    <p class="mb-1">
+                                        <small>
+                                            Expérience: ${candidate.experience_years} ans | 
+                                            Points forts: ${candidate.key_strengths.join(', ')}
+                                        </small>
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <div class="badge bg-primary fs-6 p-2">
+                                        ${(candidate.global_score * 100).toFixed(1)}%
+                                    </div>
+                                    <br>
+                                    <small class="text-muted">${candidate.match_level}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultsContent.innerHTML = html;
+        }
+
+        function getScoreClass(score) {
+            if (score >= 0.8) return 'score-excellent';
+            if (score >= 0.6) return 'score-good';
+            if (score >= 0.4) return 'score-average';
+            return 'score-poor';
+        }
+
+        async function exportResults() {
+            try {
+                const response = await fetch(`/api/export/${sessionId}`);
+                const blob = await response.blob();
+                
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `matching_results_${sessionId.substr(0,8)}.csv`;
+                a.click();
+                
+                window.URL.revokeObjectURL(url);
+                showAlert('Export CSV téléchargé avec succès!', 'success');
+            } catch (error) {
+                showAlert('Erreur lors de l\'export: ' + error.message, 'danger');
+            }
+        }
+
+        function updateProgressSteps() {
+            for (let i = 1; i <= 4; i++) {
+                const step = document.getElementById(`step-${i}`);
+                step.classList.remove('active', 'completed');
+                
+                if (i < currentStep) {
+                    step.classList.add('completed');
+                } else if (i === currentStep) {
+                    step.classList.add('active');
+                }
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertArea = document.getElementById('alertArea');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" id="${alertId}">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            alertArea.innerHTML = alertHtml;
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                const alert = document.getElementById(alertId);
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
